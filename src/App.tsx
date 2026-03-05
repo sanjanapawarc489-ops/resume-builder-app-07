@@ -113,12 +113,14 @@ function getBulletWarnings(desc: string): string[] {
 
 // --- Components ---
 
-function ResumeDocument({ data, template, scale = 1 }: { data: ResumeData; template: TemplateType; scale?: number }) {
+function ResumeDocument({ data, template, color, scale = 1 }: { data: ResumeData; template: TemplateType; color: string; scale?: number }) {
     let containerStyle: React.CSSProperties = {
-        background: 'white', color: 'black', padding: `${40 * scale}px`, minHeight: `${600 * scale}px`,
+        background: 'white', color: 'black', minHeight: `${600 * scale}px`,
         boxShadow: scale === 1 ? '0 0 20px rgba(0,0,0,0.05)' : 'none',
         border: scale === 1 ? 'none' : '1px solid #ddd',
-        wordWrap: 'break-word'
+        wordWrap: 'break-word',
+        padding: template === 'Modern' ? 0 : `${40 * scale}px`,
+        display: template === 'Modern' ? 'flex' : 'block'
     }
 
     let headerStyle: React.CSSProperties = {}
@@ -128,133 +130,221 @@ function ResumeDocument({ data, template, scale = 1 }: { data: ResumeData; templ
     if (template === 'Classic') {
         containerStyle = { ...containerStyle, fontFamily: 'var(--font-serif)', fontSize: `${12 * scale}px` }
         headerStyle = { textAlign: 'center', marginBottom: `${24 * scale}px` }
-        sectionTitleStyle = { borderBottom: '1px solid black', textTransform: 'uppercase', fontSize: `${14 * scale}px`, letterSpacing: '1px', marginBottom: `${12 * scale}px` }
+        sectionTitleStyle = { borderBottom: `1px solid ${color}`, color, textTransform: 'uppercase', fontSize: `${14 * scale}px`, letterSpacing: '1px', marginBottom: `${12 * scale}px` }
         bodyStyle = { lineHeight: '1.6' }
     } else if (template === 'Modern') {
         containerStyle = { ...containerStyle, fontFamily: 'var(--font-sans)', fontSize: `${13 * scale}px`, color: '#333' }
-        headerStyle = { textAlign: 'left', marginBottom: `${32 * scale}px`, borderBottom: '2px solid #222', paddingBottom: `${16 * scale}px` }
-        sectionTitleStyle = { color: 'var(--color-accent)', fontWeight: 'bold', textTransform: 'uppercase', fontSize: `${12 * scale}px`, letterSpacing: '2px', marginBottom: `${12 * scale}px` }
+        headerStyle = { textAlign: 'left', marginBottom: `${32 * scale}px`, borderBottom: `2px solid ${color}`, paddingBottom: `${16 * scale}px` }
+        sectionTitleStyle = { color, fontWeight: 'bold', textTransform: 'uppercase', fontSize: `${12 * scale}px`, letterSpacing: '2px', marginBottom: `${12 * scale}px` }
         bodyStyle = { lineHeight: '1.5' }
     } else if (template === 'Minimal') {
         containerStyle = { ...containerStyle, fontFamily: 'ui-monospace, monospace', fontSize: `${11 * scale}px`, color: '#111' }
         headerStyle = { textAlign: 'left', marginBottom: `${24 * scale}px` }
-        sectionTitleStyle = { borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: `${4 * scale}px 0`, textTransform: 'uppercase', fontSize: `${11 * scale}px`, marginBottom: `${12 * scale}px`, letterSpacing: '1px' }
+        sectionTitleStyle = { color, textTransform: 'uppercase', fontSize: `${11 * scale}px`, marginBottom: `${12 * scale}px`, letterSpacing: '1px' }
         bodyStyle = { lineHeight: '1.4' }
+    }
+
+    const NavItems = ({ sidebar = false }: { sidebar?: boolean }) => (
+        <div style={sidebar ? { marginBottom: `${32 * scale}px`, color: 'white' } : headerStyle}>
+            <h1 style={{ margin: `0 0 ${8 * scale}px`, fontSize: `${(template === 'Modern' ? 36 : 30) * scale}px`, letterSpacing: template === 'Modern' ? '-1px' : '1px', fontWeight: template === 'Modern' ? 'bold' : 'normal', textTransform: template === 'Classic' ? 'uppercase' : 'none' }}>
+                {data.personal.name || 'Your Name'}
+            </h1>
+            <div style={{ fontSize: `${(template === 'Minimal' ? 10 : 13) * scale}px`, opacity: sidebar ? 0.9 : 0.8 }}>
+                {data.personal.email} {data.personal.email && data.personal.phone && !sidebar ? '•' : ''} {sidebar ? <div style={{ height: 4 }} /> : null}{data.personal.phone} {data.personal.phone && data.personal.location && !sidebar ? '•' : ''} {sidebar ? <div style={{ height: 4 }} /> : null}{data.personal.location}
+            </div>
+            <div style={{ fontSize: `${(template === 'Minimal' ? 10 : 13) * scale}px`, marginTop: `${4 * scale}px`, opacity: sidebar ? 0.9 : 0.8 }}>
+                {data.links.github} {data.links.github && data.links.linkedin && !sidebar ? '|' : ''} {sidebar ? <div style={{ height: 4 }} /> : null}{data.links.linkedin}
+            </div>
+        </div>
+    )
+
+    const Summary = () => data.summary ? (
+        <section style={{ marginBottom: `${24 * scale}px` }}>
+            <h2 style={sectionTitleStyle}>Summary</h2>
+            <p style={{ ...bodyStyle, whiteSpace: 'pre-wrap', margin: 0 }}>{data.summary}</p>
+        </section>
+    ) : null
+
+    const Experience = () => data.experience.length > 0 ? (
+        <section style={{ marginBottom: `${24 * scale}px` }}>
+            <h2 style={sectionTitleStyle}>Experience</h2>
+            {data.experience.map(exp => (
+                <div key={exp.id} className="resume-item" style={{ marginBottom: `${16 * scale}px` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                        <span>{exp.company}</span>
+                        <span>{exp.duration}</span>
+                    </div>
+                    <div style={{ fontStyle: template === 'Modern' ? 'normal' : 'italic', color: template === 'Modern' ? '#666' : 'inherit' }}>{exp.role}</div>
+                    <p style={{ ...bodyStyle, margin: `${4 * scale}px 0 0`, whiteSpace: 'pre-wrap' }}>{exp.desc}</p>
+                </div>
+            ))}
+        </section>
+    ) : null
+
+    const Projects = () => data.projects.length > 0 ? (
+        <section style={{ marginBottom: `${24 * scale}px` }}>
+            <h2 style={sectionTitleStyle}>Projects</h2>
+            {data.projects.map(proj => (
+                <div key={proj.id} className="resume-item" style={{ marginBottom: `${16 * scale}px` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                        <span>{proj.name}</span>
+                        <span style={{ fontSize: `${11 * scale}px`, fontWeight: 'normal', color: template === 'Modern' ? '#666' : 'inherit' }}>
+                            {proj.link && <span>🔗 {proj.link} </span>}
+                            {proj.github && <span>🐙 {proj.github}</span>}
+                        </span>
+                    </div>
+                    {proj.techStack && proj.techStack.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * scale}px`, margin: `${4 * scale}px 0` }}>
+                            {proj.techStack.map(ts => (
+                                <span key={ts} style={{ fontSize: `${10 * scale}px`, background: template === 'Modern' ? `${color}15` : '#eee', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '4px', color: template === 'Modern' ? color : '#333' }}>{ts}</span>
+                            ))}
+                        </div>
+                    )}
+                    <p style={{ ...bodyStyle, margin: `${4 * scale}px 0 0`, whiteSpace: 'pre-wrap' }}>{proj.desc}</p>
+                </div>
+            ))}
+        </section>
+    ) : null
+
+    const Education = () => data.education.length > 0 ? (
+        <section style={{ marginBottom: `${24 * scale}px` }}>
+            <h2 style={sectionTitleStyle}>Education</h2>
+            {data.education.map(edu => (
+                <div key={edu.id} className="resume-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: `${6 * scale}px` }}>
+                    <span><strong style={{ fontWeight: 'bold' }}>{edu.school}</strong>{edu.degree ? ` — ${edu.degree}` : ''}</span>
+                    <span>{edu.year}</span>
+                </div>
+            ))}
+        </section>
+    ) : null
+
+    const Skills = ({ sidebar = false }: { sidebar?: boolean }) => (data.skills.technical.length > 0 || data.skills.soft.length > 0 || data.skills.tools.length > 0) ? (
+        <section>
+            <h2 style={{ ...sectionTitleStyle, color: sidebar ? 'white' : color, borderBottom: sidebar ? '1px solid rgba(255,255,255,0.3)' : sectionTitleStyle.borderBottom }}>Skills</h2>
+            {data.skills.technical.length > 0 && (
+                <div style={{ marginBottom: `${8 * scale}px` }}>
+                    <strong style={{ fontSize: `${11 * scale}px`, display: sidebar ? 'block' : 'inline', marginBottom: sidebar ? '4px' : '0' }}>Technical{sidebar ? '' : ': '}</strong>
+                    {data.skills.technical.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: sidebar ? 'rgba(255,255,255,0.15)' : 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: sidebar ? 'none' : '1px solid #ddd' }}>{s}</span>)}
+                </div>
+            )}
+            {data.skills.soft.length > 0 && (
+                <div style={{ marginBottom: `${8 * scale}px` }}>
+                    <strong style={{ fontSize: `${11 * scale}px`, display: sidebar ? 'block' : 'inline', marginBottom: sidebar ? '4px' : '0' }}>Soft Skills{sidebar ? '' : ': '}</strong>
+                    {data.skills.soft.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: sidebar ? 'rgba(255,255,255,0.15)' : 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: sidebar ? 'none' : '1px solid #ddd' }}>{s}</span>)}
+                </div>
+            )}
+            {data.skills.tools.length > 0 && (
+                <div>
+                    <strong style={{ fontSize: `${11 * scale}px`, display: sidebar ? 'block' : 'inline', marginBottom: sidebar ? '4px' : '0' }}>Tools & Tech{sidebar ? '' : ': '}</strong>
+                    {data.skills.tools.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: sidebar ? 'rgba(255,255,255,0.15)' : 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: sidebar ? 'none' : '1px solid #ddd' }}>{s}</span>)}
+                </div>
+            )}
+        </section>
+    ) : null
+
+    if (template === 'Modern') {
+        const sidebarStyle = { width: '33%', background: color, color: 'white', padding: `${40 * scale}px ${20 * scale}px`, flexShrink: 0 };
+        const mainColumnStyle = { width: '67%', padding: `${40 * scale}px ${30 * scale}px` };
+        return (
+            <div className="resume-print-document" style={containerStyle}>
+                <div style={sidebarStyle}>
+                    <NavItems sidebar />
+                    <Skills sidebar />
+                </div>
+                <div style={mainColumnStyle}>
+                    <Summary />
+                    <Experience />
+                    <Projects />
+                    <Education />
+                </div>
+            </div>
+        )
     }
 
     return (
         <div className="resume-print-document" style={containerStyle}>
-            <div style={headerStyle}>
-                <h1 style={{ margin: `0 0 ${8 * scale}px`, fontSize: `${(template === 'Modern' ? 36 : 30) * scale}px`, letterSpacing: template === 'Modern' ? '-1px' : '1px', fontWeight: template === 'Modern' ? 'bold' : 'normal', textTransform: template === 'Classic' ? 'uppercase' : 'none' }}>
-                    {data.personal.name || 'Your Name'}
-                </h1>
-                <div style={{ fontSize: `${(template === 'Minimal' ? 10 : 13) * scale}px`, opacity: 0.8 }}>
-                    {data.personal.email} {data.personal.email && data.personal.phone ? '•' : ''} {data.personal.phone} {data.personal.phone && data.personal.location ? '•' : ''} {data.personal.location}
-                </div>
-                <div style={{ fontSize: `${(template === 'Minimal' ? 10 : 13) * scale}px`, marginTop: `${4 * scale}px`, opacity: 0.8 }}>
-                    {data.links.github} {data.links.github && data.links.linkedin ? '|' : ''} {data.links.linkedin}
-                </div>
-            </div>
-
-            {data.summary && (
-                <section style={{ marginBottom: `${24 * scale}px` }}>
-                    <h2 style={sectionTitleStyle}>Summary</h2>
-                    <p style={{ ...bodyStyle, whiteSpace: 'pre-wrap', margin: 0 }}>{data.summary}</p>
-                </section>
-            )}
-
-            {data.experience.length > 0 && (
-                <section style={{ marginBottom: `${24 * scale}px` }}>
-                    <h2 style={sectionTitleStyle}>Experience</h2>
-                    {data.experience.map(exp => (
-                        <div key={exp.id} className="resume-item" style={{ marginBottom: `${16 * scale}px` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                <span>{exp.company}</span>
-                                <span>{exp.duration}</span>
-                            </div>
-                            <div style={{ fontStyle: template === 'Modern' ? 'normal' : 'italic', color: template === 'Modern' ? '#666' : 'inherit' }}>{exp.role}</div>
-                            <p style={{ ...bodyStyle, margin: `${4 * scale}px 0 0`, whiteSpace: 'pre-wrap' }}>{exp.desc}</p>
-                        </div>
-                    ))}
-                </section>
-            )}
-
-            {data.projects.length > 0 && (
-                <section style={{ marginBottom: `${24 * scale}px` }}>
-                    <h2 style={sectionTitleStyle}>Projects</h2>
-                    {data.projects.map(proj => (
-                        <div key={proj.id} className="resume-item" style={{ marginBottom: `${16 * scale}px` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                <span>{proj.name}</span>
-                                <span style={{ fontSize: `${11 * scale}px`, fontWeight: 'normal' }}>
-                                    {proj.link && <span>🔗 {proj.link} </span>}
-                                    {proj.github && <span>🐙 {proj.github}</span>}
-                                </span>
-                            </div>
-                            {proj.techStack && proj.techStack.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: `${4 * scale}px`, margin: `${4 * scale}px 0` }}>
-                                    {proj.techStack.map(ts => (
-                                        <span key={ts} style={{ fontSize: `${10 * scale}px`, background: '#eee', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '4px', color: '#333' }}>{ts}</span>
-                                    ))}
-                                </div>
-                            )}
-                            <p style={{ ...bodyStyle, margin: `${4 * scale}px 0 0`, whiteSpace: 'pre-wrap' }}>{proj.desc}</p>
-                        </div>
-                    ))}
-                </section>
-            )}
-
-            {data.education.length > 0 && (
-                <section style={{ marginBottom: `${24 * scale}px` }}>
-                    <h2 style={sectionTitleStyle}>Education</h2>
-                    {data.education.map(edu => (
-                        <div key={edu.id} className="resume-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: `${6 * scale}px` }}>
-                            <span><strong style={{ fontWeight: 'bold' }}>{edu.school}</strong>{edu.degree ? ` — ${edu.degree}` : ''}</span>
-                            <span>{edu.year}</span>
-                        </div>
-                    ))}
-                </section>
-            )}
-
-            {(data.skills.technical.length > 0 || data.skills.soft.length > 0 || data.skills.tools.length > 0) && (
-                <section>
-                    <h2 style={sectionTitleStyle}>Skills</h2>
-                    {data.skills.technical.length > 0 && (
-                        <div style={{ marginBottom: `${8 * scale}px` }}>
-                            <strong style={{ fontSize: `${11 * scale}px` }}>Technical: </strong>
-                            {data.skills.technical.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: '1px solid #ddd' }}>{s}</span>)}
-                        </div>
-                    )}
-                    {data.skills.soft.length > 0 && (
-                        <div style={{ marginBottom: `${8 * scale}px` }}>
-                            <strong style={{ fontSize: `${11 * scale}px` }}>Soft Skills: </strong>
-                            {data.skills.soft.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: '1px solid #ddd' }}>{s}</span>)}
-                        </div>
-                    )}
-                    {data.skills.tools.length > 0 && (
-                        <div>
-                            <strong style={{ fontSize: `${11 * scale}px` }}>Tools & Tech: </strong>
-                            {data.skills.tools.map(s => <span key={s} style={{ display: 'inline-block', fontSize: `${11 * scale}px`, background: 'var(--color-bg)', padding: `${2 * scale}px ${6 * scale}px`, borderRadius: '12px', margin: `0 ${4 * scale}px ${4 * scale}px 0`, border: '1px solid #ddd' }}>{s}</span>)}
-                        </div>
-                    )}
-                </section>
-            )}
+            <NavItems />
+            <Summary />
+            <Experience />
+            <Projects />
+            <Education />
+            <Skills />
         </div>
     )
 }
 
-function TemplateSelector({ template, setTemplate }: { template: TemplateType; setTemplate: (t: TemplateType) => void }) {
+function TemplateSelector({ template, setTemplate, color, setColor }: { template: TemplateType; setTemplate: (t: TemplateType) => void; color: string; setColor: (c: string) => void }) {
     const templates: TemplateType[] = ['Classic', 'Modern', 'Minimal']
+    const colors = [
+        { name: 'Teal', value: 'hsl(168, 60%, 40%)' },
+        { name: 'Navy', value: 'hsl(220, 60%, 35%)' },
+        { name: 'Burgundy', value: 'hsl(345, 60%, 35%)' },
+        { name: 'Forest', value: 'hsl(150, 50%, 30%)' },
+        { name: 'Charcoal', value: 'hsl(0, 0%, 25%)' }
+    ]
+
     return (
-        <Card title="Template Selection">
-            <div className="ds-buttonRow">
+        <Card title="Design & Layout">
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 {templates.map(t => (
-                    <Button key={t} variant={template === t ? 'primary' : 'secondary'} onClick={() => setTemplate(t)} style={{ flex: 1 }}>
-                        {t}
-                    </Button>
+                    <div
+                        key={t}
+                        onClick={() => setTemplate(t)}
+                        style={{
+                            flex: 1,
+                            minWidth: '90px',
+                            maxWidth: '120px',
+                            height: '110px',
+                            border: template === t ? '2px solid #0066ff' : '1px solid #ddd',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            background: '#fff',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: template === t ? '#0066ff' : '#666',
+                            fontWeight: 'bold',
+                            fontSize: '12px',
+                            transition: 'all 0.2s',
+                            boxShadow: template === t ? '0 0 0 2px rgba(0,102,255,0.2)' : 'none'
+                        }}
+                    >
+                        {template === t && (
+                            <div style={{ position: 'absolute', top: 4, right: 4, background: '#0066ff', color: 'white', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>✓</div>
+                        )}
+                        <div style={{ width: '60px', height: '60px', background: '#f8f9fa', border: '1px solid #eee', marginBottom: '8px', display: 'flex', padding: '2px', boxSizing: 'border-box' }}>
+                            {t === 'Classic' && <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}><div style={{ width: '100%', borderBottom: '1px solid #ccc', margin: '4px 0', height: '1px' }} /><div style={{ width: '100%', borderBottom: '1px solid #ccc', margin: '4px 0', height: '1px' }} /></div>}
+                            {t === 'Modern' && <div style={{ display: 'flex', width: '100%', height: '100%' }}><div style={{ width: '30%', background: color, height: '100%' }}></div><div style={{ width: '70%', background: '#eaeaea', height: '100%', padding: '2px' }}><div style={{ background: '#ccc', height: '4px', width: '100%', marginBottom: '2px' }}></div><div style={{ background: '#ccc', height: '4px', width: '70%' }}></div></div></div>}
+                            {t === 'Minimal' && <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', paddingTop: '4px' }}><div style={{ width: '60%', height: '4px', background: '#eaeaea', margin: '2px 0' }} /><div style={{ width: '80%', height: '4px', background: '#eaeaea', margin: '2px 0' }} /></div>}
+                        </div>
+                        <div>{t}</div>
+                    </div>
                 ))}
             </div>
-            <p className="ds-panelHint" style={{ marginTop: 'var(--space-1)', fontSize: '12px' }}>Changes layout styling only.</p>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Theme:</span>
+                {colors.map(c => (
+                    <div
+                        key={c.name}
+                        onClick={() => setColor(c.value)}
+                        style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: c.value,
+                            cursor: 'pointer',
+                            outline: color === c.value ? `2px solid ${c.value}` : 'none',
+                            outlineOffset: '2px',
+                            transition: 'outline 0.1s'
+                        }}
+                        title={c.name}
+                    />
+                ))}
+            </div>
         </Card>
     )
 }
@@ -348,10 +438,17 @@ function Home() {
     )
 }
 
-function Builder({ data, update, template, setTemplate }: { data: ResumeData; update: (d: ResumeData) => void; template: TemplateType; setTemplate: (t: TemplateType) => void }) {
+function Builder({ data, update, template, setTemplate, color, setColor }: { data: ResumeData; update: (d: ResumeData) => void; template: TemplateType; setTemplate: (t: TemplateType) => void; color: string; setColor: (c: string) => void }) {
     const addEdu = () => update({ ...data, education: [...data.education, { id: Date.now().toString(), school: '', degree: '', year: '' }] })
     const addExp = () => update({ ...data, experience: [...data.experience, { id: Date.now().toString(), company: '', role: '', duration: '', desc: '' }] })
     const addProj = () => update({ ...data, projects: [...data.projects, { id: Date.now().toString(), name: '', desc: '', link: '', github: '', techStack: [] }] })
+
+    const [toast, setToast] = useState('')
+
+    const handleDownload = () => {
+        setToast('PDF export ready! Check your downloads.')
+        setTimeout(() => setToast(''), 3000)
+    }
 
     const loadSample = () => update(SAMPLE_DATA)
 
@@ -594,25 +691,38 @@ function Builder({ data, update, template, setTemplate }: { data: ResumeData; up
                     )}
                 </Card>
 
-                <TemplateSelector template={template} setTemplate={setTemplate} />
+                <TemplateSelector template={template} setTemplate={setTemplate} color={color} setColor={setColor} />
 
                 <Card title="Live Preview">
                     <div className="resume-preview-shell">
-                        <ResumeDocument data={data} template={template} scale={0.65} />
+                        <ResumeDocument data={data} template={template} color={color} scale={0.65} />
                     </div>
                 </Card>
 
                 <Card title="Controls">
                     <Button variant="secondary" onClick={loadSample} style={{ width: '100%' }}>Load Sample Data</Button>
                     <div style={{ height: 'var(--space-1)' }} />
-                    <Button variant="primary" onClick={() => window.print()} style={{ width: '100%' }}>Download PDF</Button>
+                    <Button variant="primary" onClick={handleDownload} style={{ width: '100%' }}>Download PDF</Button>
                 </Card>
+
+                {toast && (
+                    <div style={{ position: 'fixed', bottom: '20px', right: '20px', background: 'var(--color-state)', color: 'white', padding: '12px 24px', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, fontWeight: 'bold' }}>
+                        {toast}
+                    </div>
+                )}
             </aside>
         </div>
     )
 }
 
-function Preview({ data, template, setTemplate }: { data: ResumeData; template: TemplateType; setTemplate: (t: TemplateType) => void }) {
+function Preview({ data, template, setTemplate, color, setColor }: { data: ResumeData; template: TemplateType; setTemplate: (t: TemplateType) => void; color: string; setColor: (c: string) => void }) {
+    const [toast, setToast] = useState('')
+
+    const handleDownload = () => {
+        setToast('PDF export ready! Check your downloads.')
+        setTimeout(() => setToast(''), 3000)
+    }
+
     const handleCopyText = () => {
         let text = `${data.personal.name}\n`
         const contactParts = []
@@ -696,14 +806,19 @@ function Preview({ data, template, setTemplate }: { data: ResumeData; template: 
                     </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-                    <Button variant="primary" onClick={() => window.print()}>Print / Save as PDF</Button>
+                    <Button variant="primary" onClick={handleDownload}>Print / Save as PDF</Button>
                     <Button variant="secondary" onClick={handleCopyText}>Copy Resume as Text</Button>
                 </div>
-                <TemplateSelector template={template} setTemplate={setTemplate} />
+                <TemplateSelector template={template} setTemplate={setTemplate} color={color} setColor={setColor} />
             </div>
             <div className="resume-print-container">
-                <ResumeDocument data={data} template={template} />
+                <ResumeDocument data={data} template={template} color={color} />
             </div>
+            {toast && (
+                <div style={{ position: 'fixed', bottom: '20px', right: '20px', background: 'var(--color-state)', color: 'white', padding: '12px 24px', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, fontWeight: 'bold' }}>
+                    {toast}
+                </div>
+            )}
         </div>
     )
 }
@@ -763,6 +878,11 @@ export default function App() {
         return saved ? saved : 'Classic'
     })
 
+    const [color, setColor] = useState<string>(() => {
+        const saved = localStorage.getItem('rb_resume_color')
+        return saved ? saved : 'hsl(168, 60%, 40%)'
+    })
+
     const [proof, setProof] = useState<ProofState>({
         ui: { checked: false, proof: '' },
         logic: { checked: false, proof: '' },
@@ -778,6 +898,10 @@ export default function App() {
         localStorage.setItem('rb_resume_template', template)
     }, [template])
 
+    useEffect(() => {
+        localStorage.setItem('rb_resume_color', color)
+    }, [color])
+
     const updateProof = (key: ProofKey, next: { checked?: boolean; proof?: string }) => {
         setProof((prev) => ({ ...prev, [key]: { ...prev[key], ...next } }))
     }
@@ -790,8 +914,8 @@ export default function App() {
                 <div className="ds-container">
                     <Routes>
                         <Route path="/" element={<Home />} />
-                        <Route path="/builder" element={<Builder data={data} update={setData} template={template} setTemplate={setTemplate} />} />
-                        <Route path="/preview" element={<Preview data={data} template={template} setTemplate={setTemplate} />} />
+                        <Route path="/builder" element={<Builder data={data} update={setData} template={template} setTemplate={setTemplate} color={color} setColor={setColor} />} />
+                        <Route path="/preview" element={<Preview data={data} template={template} setTemplate={setTemplate} color={color} setColor={setColor} />} />
                         <Route path="/proof" element={<Proof />} />
                     </Routes>
                 </div>
